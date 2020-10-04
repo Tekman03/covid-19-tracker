@@ -67,7 +67,6 @@ async def plot_csv(path,
         total_confirmed,
         total_recovered,
         total_deaths, is_us=is_us)
-    alpha = .2
     fig, ax = plt.subplots()
     ax.spines['bottom'].set_visible(False)
     ax.spines['top'].set_visible(False)
