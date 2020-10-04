@@ -11,7 +11,6 @@ from pymysql.err import IntegrityError
 import src.utils as utils
 from src.plotting import PlotEmpty, plot_csv, plot_graph
 
-
 class Datacmds(commands.Cog):
     """Help commands"""
     __slots__ = ("bot", "continent_code")
@@ -25,7 +24,6 @@ class Datacmds(commands.Cog):
             "oc",
             "sa"
         ]
-
     @commands.command(name="list")
     @commands.cooldown(3, 30, commands.BucketType.user)
     async def list_countries(self, ctx):
@@ -286,197 +284,122 @@ class Datacmds(commands.Cog):
         await ctx.send(file=img, embed=embed)
 
     @commands.command(name="graph", aliases=["g"])
-    # @commands.cooldown(3, 30, commands.BucketType.user)
+    @commands.cooldown(3, 30, commands.BucketType.user)
     async def graph(self, ctx, *args):
-        embed = discord.Embed(
-            title="API REWORK",
-            description="This command is down for now, sorry (all the command left in c!help are still available)",
-            color=utils.COLOR,
-            timestamp=utils.discord_timestamp()
-        )
-        embed.set_thumbnail(url=self.bot.thumb + str(time.time()))
+        #c!graph <proportion | daily | total> <confirmed | recovered | deaths> <top | country[] | world>
+
+        # graph is going to be stored in files with names:
+        # es_it_gb_us-proportion-deaths.png
+        # most-proportion-confirmed.png
+
+        types = ['proportion', 'daily', 'total']
+
+        description = {
+            'proportion': "This shows the **percentage of the population** who have confirmed/recovered/died.",
+            'daily': "This shows the number of confirmed/recovered/deaths each day.",
+            'total': "This shows the cumulative number of confirmed/recovered/deaths."
+        }
+        img = None
+
+        ## START WITH INPUT VALIDATION
+        if len(args) < 3:
+            print("not enough args")
+            embed = discord.Embed(
+                description=f"Not enough args provided, I can't tell you which country/region/graph type if you won't tell me everything!\n\n__Examples:__\n `{ctx.prefix}g proportion deaths gb us it de fr`\n`{ctx.prefix}g proportion confirmed top`",
+                timestamp=dt.datetime.utcnow(),
+                color=utils.COLOR
+            )
+            embed.set_author(name=f"Coronavirus COVID-19 Graphs")
+        else:
+            # at least 2 arguments have been provided
+            if args[0] not in types:
+                # 1st argument is not an available graph type
+                embed = discord.Embed(
+                    description="Your first argument should tell me which kind of graph you would like to see. (proportion/daily_change/total)",
+                    color=utils.COLOR,
+                    timestamp=utils.discord_timestamp()
+                )
+            elif args[1] not in ['confirmed', 'recovered', 'deaths']:
+                # 2nd argument is not an available measure
+                embed = discord.Embed(
+                    description="Your second argument should tell me which type of measure you would like to graph. (confirmed/recovered/deaths)",
+                    color=utils.COLOR,
+                    timestamp=utils.discord_timestamp()
+                )
+            else:
+                # 1st and 2nd arguments are all good
+                if args[0] == "total":
+                    api_graph_type = "history"
+                else:
+                    api_graph_type = args[0]
+
+
+                if args[2] == "top":
+                    await ctx.send("Not yet implemented: cogs/Datacmds.py:332")
+                elif args[2] == "world":
+                    await ctx.send("Not yet implemented: cogs/Datacmds.py:334")
+                else:
+                    # presumably the user has entered one or more countries
+                    stats = []
+                    for c in args[2:]:
+                        data = await utils.get(self.bot.http_session, f"/{api_graph_type}/{args[1]}/{c.lower()}")
+                        dates = list(data[api_graph_type])
+                        values = list(data[api_graph_type].values())
+                        s = {
+                            "dates": dates,
+                            "values": values,
+                            "iso2": data["iso2"],
+                            "iso3": data["iso3"]
+                        }
+                        stats.append(s)
+
+                    if args[0] == "proportion":
+                        ylabel = f"Proportion of {args[1].capitalize()} (%)"
+                    elif args[0] == "daily":
+                        ylabel = f"Daily increase in {args[1].capitalize()}"
+                    elif args[0] == "total":
+                        ylabel = f"Total {args[1].capitalize()}"
+
+                    embed = discord.Embed(
+                        description=f"Here is a graph of the **{ylabel}** of COVID-19. " + description[args[0]],
+                        timestamp=dt.datetime.utcnow(),
+                        color=utils.COLOR
+                    )   
+
+                    path = ""
+                    for c in stats:
+                        embed.add_field(
+                            name=c['iso3'],
+                            value=str(c['values'][-1])
+                        )
+
+                        path += f"{c['iso2'].lower()}_"
+
+            path += f"{args[0]}-{args[1]}-{utils.STATS_PATH}"
+
+            if not os.path.exists(path):
+                await plot_graph(path, stats, args[0], ylabel)
+
+            with open(path, "rb") as p:
+                img = discord.File(p, filename=path)
+
+            embed.set_image(url=f'attachment://{path}')
+
+            embed.set_author(name=f"Coronavirus COVID-19 Graphs - {args[0].capitalize()} of {args[1].capitalize()}",
+                        url="https://www.who.int/home",
+                        icon_url=self.bot.author_thumb)
+
         embed.set_footer(
-            text="coronavirus.jessicoh.com/api/",
+            text="coronavirus.jessicoh.com/api/ | ",# + utils.last_update(data["lastUpdate"]),
             icon_url=ctx.me.avatar_url
         )
-        await ctx.send(embed=embed)
-    #     #c!graph <proportion | ...> <confirmed/recovered/deaths/active> <top | country[]>
-
-    #     # graph is going to be store in files with names:
-    #     # es_it_gb_us-proportion-deaths.png
-    #     # most-proportion-confirmed.png
-
-    #     types = ['proportion']
-
-    #     description = {
-    #         'proportion': "This shows the **percentage of the population** who have confirmed/recovered/died/active."
-    #     }
-
-    #     img = None
-
-    #     ## START WITH INPUT VALIDATION
-    #     if len(args) < 3:
-    #         embed = discord.Embed(
-    #                 description=f"Not enough args provided, I can't tell you which country/region/graph type if you won't tell me everything!\n\n__Examples:__\n `{ctx.prefix}g proportion deaths gb us it de fr`\n`{ctx.prefix}g proportion confirmed top`",
-    #                 color=utils.COLOR,
-    #                 timestamp=utils.discord_timestamp()
-    #             )
-    #         embed.set_author(name=f"Coronavirus COVID-19 Graphs",
-    #                     url="https://www.who.int/home",
-    #                     icon_url=self.bot.author_thumb)
-    #     else:
-    #         # at least 2 arguments have been provided
-    #         if args[0] not in types:
-    #             # 1st argument is not an available graph type
-    #             embed = discord.Embed(
-    #                 description="Your first argument should tell me which kind of graph you would like to see. (proportion/[WIP])",
-    #                 color=utils.COLOR,
-    #                 timestamp=utils.discord_timestamp()
-    #             )
-    #         elif args[1] not in ['confirmed', 'recovered', 'deaths', 'active']:
-    #             # 2nd argument is not an available measure
-    #             embed = discord.Embed(
-    #                 description="Your second argument should tell me which kind of measure you would like to graph. (confirmed/recovered/deaths/active)",
-    #                 color=utils.COLOR,
-    #                 timestamp=utils.discord_timestamp()
-    #             )
-    #         else:
-    #             # 1st and 2nd arguments are all good
-    #             if args[2] == "top":
-    #                 # user has requested a graph with the most or lease countries for that type
-    #                 stats = self.bot._data["sorted"]
-    #                 pop = self.bot._populations
-
-    #                 calculatedData = {}
-
-    #                 # loop through all stats
-    #                 for i in range(len(stats)):
-    #                     if args[0] == "proportion":
-    #                         if pop[stats[i]["country"]["name"]] == 0:
-    #                             continue
-    #                         # calculate current proportion and add to dictionary
-    #                         calculatedData[stats[i]["country"]["code"]] = int(stats[i]['statistics'][args[1]]) / pop[stats[i]["country"]["name"]] * 100
-
-    #                 # sort dictionary smallest to largest value
-    #                 calculatedData = {k: v for k, v in sorted(calculatedData.items(), key=lambda item: item[1], reverse=True)}
-
-    #                 # get history stats for first x countries in the dict
-    #                 graph = []
-
-    #                 count = 6
-    #                 for c in calculatedData:
-    #                     if count > 0:
-    #                         check = utils._get_country(self.bot._data, c.lower())
-    #                         if check:
-    #                             graph.append(check)
-    #                     else:
-    #                         break
-    #                     count -= 1
-    #                 for i in range(len(graph)):
-    #                     if (args[0] == "proportion"):
-    #                         for j in graph[i]['history']:
-    #                             graph[i]['history'][j][args[0]] = int(graph[i]['history'][j][args[1]]) / pop[graph[i]["country"]["name"]] * 100
-    #                         graph[i]['statistics'][args[0]] = int(graph[i]['statistics'][args[1]]) / pop[graph[i]["country"]["name"]] * 100
-    #                     else:
-    #                         await ctx.send("Not yet implemented: cogs/Datacmds.py:383")
-
-    #                 path = args[2] + "-" + args[0] + "-" + args[1] + "-" + utils.STATS_PATH
-
-    #                 embed = discord.Embed(
-    #                     description=f"Here is a graph of the **{args[0].capitalize()}** of **{args[1].capitalize()}** of COVID-19. " + description[args[0]],
-    #                     timestamp=dt.datetime.utcnow(),
-    #                     color=utils.COLOR
-    #                 )
-
-    #                 for c in graph:
-    #                     embed.add_field(
-    #                         name=c['country']['name'],
-    #                         value=str(round(c['statistics'][args[0]], 5)) + "%"
-    #                     )
-
-    #                 if not os.path.exists(path):
-    #                     await plot_graph(path, graph, args[0], args[1])
-
-    #                 with open(path, "rb") as p:
-    #                     img = discord.File(p, filename=path)
-
-    #                 embed.set_image(url=f'attachment://{path}')
-
-    #             else:
-    #                 # presumably the user has entered one or more countries
-    #                 pop = self.bot._populations
-    #                 # check all countries are valid
-    #                 stats = []
-    #                 for c in args[2:]:
-    #                     check = utils._get_country(self.bot._data, c.lower())
-    #                     if check:
-    #                         stats.append(check)
-
-    #                 for i in range(len(stats)):
-    #                     # calculate proportion and store
-    #                     ##print(stats[i]['history'])
-    #                     if (args[0] == "proportion"):
-    #                         for j in stats[i]['history']:
-    #                             stats[i]['history'][j][args[0]] = int(stats[i]['history'][j][args[1]]) / pop[stats[i]["country"]["name"]] * 100
-    #                         stats[i]['statistics'][args[0]] = int(stats[i]['statistics'][args[1]]) / pop[stats[i]["country"]["name"]] * 100
-    #                     else:
-    #                         await ctx.send("Not yet implemented: cogs/Datacmds.py:410")
-
-    #                 # sort the stats in order of highest proportion
-    #                 n = len(stats)
-    #                 swapped = True
-    #                 while swapped:
-    #                     swapped = False
-    #                     for i in range(0, n-1):
-    #                         if stats[i]['statistics'][args[0]] > stats[i+1]['statistics'][args[0]]:
-    #                             swapped = True
-    #                             temp = stats[i]
-    #                             stats[i] = stats[i+1]
-    #                             stats[i+1] = temp
-    #                 n = n-1
-
-    #                 stats.reverse()
-
-    #                 embed = discord.Embed(
-    #                     description=f"Here is a graph of the **{args[0].capitalize()}** of **{args[1].capitalize()}** of COVID-19. " + description[args[0]],
-    #                     timestamp=dt.datetime.utcnow(),
-    #                     color=utils.COLOR
-    #                 )
-
-    #                 # add field with the data
-    #                 # also create file path for graph
-    #                 path = ""
-    #                 for c in stats:
-    #                     embed.add_field(
-    #                         name=c['country']['name'],
-    #                         value=str(round(c['statistics'][args[0]], 5)) + "%"
-    #                     )
-
-    #                     path += f"{c['country']['code'].lower()}_"
-    #                 path += f"{args[0]}-{args[1]}-{utils.STATS_PATH}"
-
-    #                 if not os.path.exists(path):
-    #                     await plot_graph(path, stats, args[0], args[1])
-
-    #                 with open(path, "rb") as p:
-    #                     img = discord.File(p, filename=path)
-
-    #                 embed.set_image(url=f'attachment://{path}')
-
-
-
-        #     embed.set_author(name=f"Coronavirus COVID-19 Graphs - {args[0].capitalize()} of {args[1].capitalize()}",
-        #                 url="https://www.who.int/home",
-        #                 icon_url=self.bot.author_thumb)
-        # embed.set_thumbnail(url=self.bot.thumb + str(time.time()))
-        # embed.set_footer(
-        #     text=utils.last_update(utils.DATA_PATH),
-        #     icon_url=ctx.me.avatar_url
-        # )
-        # if img != None:
-        #     await ctx.send(file=img, embed=embed)
-        # else:
-        #     await ctx.send(embed=embed)
+        embed.set_thumbnail(
+            url=self.bot.thumb + str(time.time())
+        )
+        if img != None:
+            await ctx.send(file=img, embed=embed)
+        else:
+            await ctx.send(embed=embed)
 
     @staticmethod
     def _get_idx(args, val):
