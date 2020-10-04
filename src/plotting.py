@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter1d
 from aiohttp import ClientSession
 from matplotlib.ticker import (AutoMinorLocator, FormatStrFormatter,
                                MultipleLocator)
@@ -150,38 +151,43 @@ async def make_courbe(
     return timeline, confirmed, recovered, deaths, active
 
 # function to plot data from the c!graph command
-async def plot_graph(path, data, value, measure, dark=True):
+async def plot_graph(path, data, graph_type, ylabel):
     # value is the name of the value to be graphed
 
     # the number of days to graph
-    max_days_back = 76
+    #max_days_back = 76
+#
+    #days_back = 10000
+    #shortest = {}
+    #timeline = []
+    #for c in data:
+    #    l = len(c['values'])
+    #    if l < days_back:
+    #        days_back = l
+    #        shortest = c['values']
+    #for s in shortest:
+    #    timeline.append(s[:-3])
+#
+#    if days_back > max_days_back:
+#        days_back = max_days_back
 
-    days_back = 10000
-    shortest = {}
-    timeline = []
-    for c in data:
-        l = len(c['history'])
-        if l < days_back:
-            days_back = l
-            shortest = c['history']
-    for s in shortest:
-        timeline.append(s[:-3])
-
-    if days_back > max_days_back:
-        days_back = max_days_back
-
-    timeline = timeline[-days_back:]
+    timeline = data[0]['dates']
+    days_back = len(timeline)
+    timeline = [*range(days_back)]
 
     # get yvalue data from data
-    yvalues = []
+    values = []
     for c in data:
-        p = []
-        for d in c['history']:
-            p.append(c['history'][d]['proportion'])
-        yvalues.append(p[-days_back:])
+        p = c['values']
+        p = list(map(float, p))
+        values.append(p)
 
+    # smooth curve
+    for c in range(len(values)):
+        ysmoothed = gaussian_filter1d(values[c], sigma=4)
+        values[c] = ysmoothed
     fig, ax = plt.subplots()
-    alpha = .2
+
     ax.spines['bottom'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -189,25 +195,30 @@ async def plot_graph(path, data, value, measure, dark=True):
 
     ax.xaxis.set_major_locator(MultipleLocator(7))
     # plot lines
-    # TODO: implement all countries
-    for c in range(len(yvalues)):
-        ax.plot(timeline, yvalues[c], ".-", alpha=0.5)
+    for c in range(len(values)):
+        ax.plot(timeline, values[c], "-")
+        
 
-    ticks = [i for i in range(len(timeline)) if i % int(days_back / 5) == 0]
+    ticks = [i for i in range(len(timeline)) if i % (days_back / 5) == 0]
     plt.xticks(ticks, ha="center")
     ax.yaxis.grid(True)
-    plt.ylabel(f"{value.capitalize()} of {measure.capitalize()} (%)")
-    plt.xlabel("Timeline (DD/MM)")
+    plt.ylabel(ylabel)
+    plt.xlabel("Timeline (mm/dd)")
 
-    if dark:
-        ax.xaxis.label.set_color('white')
-        ax.yaxis.label.set_color('white')
-        ax.tick_params(axis='x', colors='white')
-        ax.tick_params(axis='y', colors='white')
-        leg = plt.legend([name['country']['name'] for name in data ], facecolor='0.1', loc="upper left")
-        for text in leg.get_texts():
-            text.set_color("white")
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.label.set_color('white')
+    ax.tick_params(axis='x', colors='white')
+    ax.tick_params(axis='y', colors='white')
+    leg = plt.legend([c['iso3'] for c in data ], facecolor='0.1', loc="upper left")
+    for text in leg.get_texts():
+        text.set_color("white")
+    ax.set_ylim(ymin=0)
+    ylabs = []
+    locs, _ = plt.yticks()
 
-        plt.savefig(path, transparent=True)
+    for iter_loc in locs:
+        ylabs.append(utils.human_format(iter_loc))
+    plt.yticks(locs, ylabs)
+    plt.savefig(path, transparent=True)
 
     plt.close(fig)
