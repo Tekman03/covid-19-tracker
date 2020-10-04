@@ -144,6 +144,10 @@ def parse_state_input(*params: list) -> Tuple[str, str]:
 
 def human_format(num: int) -> str:
     magnitude = 0
+
+    if num < 1:
+        return num
+
     while abs(num) >= 1000:
         magnitude += 1
         num /= 1000
