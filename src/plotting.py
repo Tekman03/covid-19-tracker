@@ -170,9 +170,7 @@ async def plot_graph(path, data, graph_type, ylabel):
 #    if days_back > max_days_back:
 #        days_back = max_days_back
 
-    timeline = data[0]['dates']
-    days_back = len(timeline)
-    timeline = [*range(days_back)]
+    timeline = list(x[:-3] for x in data[0]["dates"])
 
     # get yvalue data from data
     values = []
@@ -198,7 +196,7 @@ async def plot_graph(path, data, graph_type, ylabel):
         ax.plot(timeline, values[c], "-")
         
 
-    ticks = [i for i in range(len(timeline)) if i % (days_back / 5) == 0]
+    ticks = [i for i in range(len(timeline)) if i % 30 == 0]
     plt.xticks(ticks, ha="center")
     ax.yaxis.grid(True)
     plt.ylabel(ylabel)
