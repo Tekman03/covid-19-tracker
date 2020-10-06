@@ -350,7 +350,8 @@ class Datacmds(commands.Cog):
                             "dates": dates,
                             "values": values,
                             "iso2": data["iso2"],
-                            "iso3": data["iso3"]
+                            "iso3": data["iso3"],
+                            "name": data["name"]
                         }
                         stats.append(s)
 
@@ -377,7 +378,7 @@ class Datacmds(commands.Cog):
                             value = c['values'][-1] + " **(%)**"
 
                         embed.add_field(
-                            name=c['iso3'],
+                            name=c['name'],
                             value=value
                         )
 

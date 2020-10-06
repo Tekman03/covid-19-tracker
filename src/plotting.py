@@ -206,7 +206,7 @@ async def plot_graph(path, data, graph_type, ylabel):
     ax.yaxis.label.set_color('white')
     ax.tick_params(axis='x', colors='white')
     ax.tick_params(axis='y', colors='white')
-    leg = plt.legend([c['iso3'] for c in data ], facecolor='0.1', loc="upper left")
+    leg = plt.legend([c['name'] for c in data ], facecolor='0.1', loc="upper left")
     for text in leg.get_texts():
         text.set_color("white")
     ax.set_ylim(ymin=0)
