@@ -292,12 +292,13 @@ class Datacmds(commands.Cog):
         # es_it_gb_us-proportion-deaths.png
         # most-proportion-confirmed.png
 
-        types = ['proportion', 'daily', 'total']
+        types = ['proportion', 'daily', 'total', 'proportion-daily']
 
         description = {
             'proportion': "This shows the **percentage of the population** who have confirmed/recovered/died.",
             'daily': "This shows the number of confirmed/recovered/deaths each day.",
-            'total': "This shows the cumulative number of confirmed/recovered/deaths."
+            'total': "This shows the cumulative number of confirmed/recovered/deaths.",
+            'proportion-daily': "This shows the **percentage of the population** who have confirmed/recovered/died each day."
         }
         img = None
 
@@ -315,7 +316,7 @@ class Datacmds(commands.Cog):
             if args[0] not in types:
                 # 1st argument is not an available graph type
                 embed = discord.Embed(
-                    description="Your first argument should tell me which kind of graph you would like to see. (proportion/daily_change/total)",
+                    description="Your first argument should tell me which kind of graph you would like to see. (proportion/daily/proportion-daily/total)",
                     color=utils.COLOR,
                     timestamp=utils.discord_timestamp()
                 )
@@ -359,6 +360,8 @@ class Datacmds(commands.Cog):
                         ylabel = f"Daily increase in {args[1].capitalize()}"
                     elif args[0] == "total":
                         ylabel = f"Total {args[1].capitalize()}"
+                    elif args[0] == "proportion-daily":
+                        ylabel = f"Proportional Daily increase in {args[1].capitalize()}"
 
                     embed = discord.Embed(
                         description=f"Here is a graph of the **{ylabel}** of COVID-19. " + description[args[0]],
