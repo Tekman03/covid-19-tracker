@@ -355,6 +355,23 @@ class Datacmds(commands.Cog):
                         }
                         stats.append(s)
 
+                    # sort the stats in order of highest proportion
+                    n = len(stats)
+                    print(stats)
+                    swapped = True
+                    while swapped:
+                        swapped = False
+                        for i in range(0, n-1):
+                            if stats[i]['values'][-1] > stats[i+1]['values'][-1]:
+                                swapped = True
+                                temp = stats[i]
+                                stats[i] = stats[i+1]
+                                stats[i+1] = temp
+                    n = n-1
+
+                    stats.reverse()
+                    print(stats)
+                    
                     if args[0] == "proportion":
                         ylabel = f"Proportion of {args[1].capitalize()} (%)"
                     elif args[0] == "daily":
