@@ -371,9 +371,14 @@ class Datacmds(commands.Cog):
 
                     path = ""
                     for c in stats:
+                        if args[0] == "daily" or args[0] == "total":
+                            value = f"{c['values'][-1]:,}"
+                        elif args[0] == "proportion" or args[0] == "proportion-daily":
+                            value = c['values'][-1] + " **(%)**"
+
                         embed.add_field(
                             name=c['iso3'],
-                            value=str(c['values'][-1])
+                            value=value
                         )
 
                         path += f"{c['iso2'].lower()}_"
