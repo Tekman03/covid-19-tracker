@@ -338,7 +338,46 @@ class Datacmds(commands.Cog):
                 if args[2] == "top":
                     await ctx.send("Not yet implemented: cogs/Datacmds.py:332")
                 elif args[2] == "world":
-                    await ctx.send("Not yet implemented: cogs/Datacmds.py:334")
+                    # user wants to see a graph of the worldwide total
+                    stats = []
+                    data = await utils.get(self.bot.http_session, f"/{api_graph_type}/{args[1]}/total")
+                    dates = list(data[api_graph_type])
+                    values = list(data[api_graph_type].values())
+                    s = {
+                        "dates": dates,
+                        "values": values,
+                        "name": "Worldwide"
+                    }
+                    stats.append(s)
+
+                    if args[0] == "proportion":
+                        ylabel = f"Proportion of {args[1].capitalize()} (%)"
+                    elif args[0] == "daily":
+                        ylabel = f"Daily increase in {args[1].capitalize()}"
+                    elif args[0] == "total":
+                        ylabel = f"Total {args[1].capitalize()}"
+                    elif args[0] == "proportion-daily":
+                        ylabel = f"Proportional Daily increase in {args[1].capitalize()}"
+
+                    embed = discord.Embed(
+                        description=f"Here is a worldwide graph of the **{ylabel}** of COVID-19. " + description[args[0]],
+                        timestamp=dt.datetime.utcnow(),
+                        color=utils.COLOR
+                    )   
+
+                    path = ""
+                    if args[0] == "daily" or args[0] == "total":
+                        value = f"{stats[0]['values'][-1]:,}"
+                    elif args[0] == "proportion" or args[0] == "proportion-daily":
+                        value = stats[0]['values'][-1] + " **(%)**"
+
+                    embed.add_field(
+                        name="World",
+                        value=value
+                    )
+
+                    path += f"world_"
+
                 else:
                     # presumably the user has entered one or more countries
                     stats = []
