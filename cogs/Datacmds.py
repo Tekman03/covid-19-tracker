@@ -336,7 +336,74 @@ class Datacmds(commands.Cog):
 
 
                 if args[2] == "top":
-                    await ctx.send("Not yet implemented: cogs/Datacmds.py:332")
+                    # user wants to see the top x countries base on the data_type
+                    stats = []
+
+                    NUM_RETURN = 6
+
+                    data = await utils.get(self.bot.http_session, f"/{api_graph_type}/{args[1]}/")
+                    for c in data:
+                        print(data[c])
+                        if data[c][api_graph_type] == "This region doesn't work with this function atm":
+                            continue
+                        dates = list(data[c][api_graph_type])
+                        values = list(data[c][api_graph_type].values())
+                        s = {
+                            "dates": dates,
+                            "values": values,
+                            "iso2": data[c]["iso2"],
+                            "iso3": data[c]["iso3"],
+                            "name": c
+                        }
+                        stats.append(s)
+
+                    # sort the stats in order of highest proportion
+                    n = len(stats)
+                    print(stats)
+                    swapped = True
+                    while swapped:
+                        swapped = False
+                        for i in range(0, n-1):
+                            if stats[i]['values'][-1] > stats[i+1]['values'][-1]:
+                                swapped = True
+                                temp = stats[i]
+                                stats[i] = stats[i+1]
+                                stats[i+1] = temp
+                    n = n-1
+
+                    stats.reverse()
+                    print(stats)
+                    
+                    stats = stats[0:6]
+
+                    if args[0] == "proportion":
+                        ylabel = f"Proportion of {args[1].capitalize()} (%)"
+                    elif args[0] == "daily":
+                        ylabel = f"Daily increase in {args[1].capitalize()}"
+                    elif args[0] == "total":
+                        ylabel = f"Total {args[1].capitalize()}"
+                    elif args[0] == "proportion-daily":
+                        ylabel = f"Proportional Daily increase in {args[1].capitalize()}"
+
+                    embed = discord.Embed(
+                        description=f"Here is a graph of the **{ylabel}** of COVID-19. " + description[args[0]],
+                        timestamp=dt.datetime.utcnow(),
+                        color=utils.COLOR
+                    )   
+
+                    path = ""
+                    for c in stats:
+                        if args[0] == "daily" or args[0] == "total":
+                            value = f"{c['values'][-1]:,}"
+                        elif args[0] == "proportion" or args[0] == "proportion-daily":
+                            value = c['values'][-1] + " **(%)**"
+
+                        embed.add_field(
+                            name=c['name'],
+                            value=value
+                        )
+
+                        path += f"{c['iso2'].lower()}_"
                 elif args[2] == "world":
                     # user wants to see a graph of the worldwide total
                     stats = []
